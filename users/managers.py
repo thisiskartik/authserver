@@ -24,7 +24,7 @@ class UserManager(BaseUserManager):
         token = default_token_generator.make_token(user)
         subject = f'Email Verification | Welcome {user.first_name} {user.last_name}'
         html_message = render_to_string('email_verification.html',
-                                        {'token': token, 'id': user.id})
+                                        {'token': token, 'id': user.pk})
         plain_message = strip_tags(html_message)
         from_email = settings.EMAIL_HOST_USER
         to = user.email
