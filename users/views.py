@@ -2,7 +2,8 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework.status import HTTP_400_BAD_REQUEST, HTTP_403_FORBIDDEN, HTTP_201_CREATED, HTTP_200_OK
 from django.contrib.auth.password_validation import validate_password
-from django.core.exceptions import ValidationError
+from django.contrib.auth.tokens import default_token_generator
+from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from email_validator import validate_email, EmailNotValidError
 from .models import User
 
@@ -42,3 +43,21 @@ def register(request):
                         status=HTTP_400_BAD_REQUEST)
 
     return Response({'error': 'Registration Successful'}, HTTP_201_CREATED)
+
+
+@api_view(['POST'])
+def verify_email(request):
+    if 'token' not in request.data or 'id' not in request.data:
+        return Response({'error': 'Missing Token'}, status=HTTP_400_BAD_REQUEST)
+
+    try:
+        user = User.objects.get(pk=request.data['id'])
+    except (ObjectDoesNotExist, ValueError):
+        return Response({'error': 'Invalid ID'}, status=HTTP_403_FORBIDDEN)
+
+    if default_token_generator.check_token(user, request.data['token']):
+        user.is_active = True
+        user.save()
+        return Response({'success': 'Verified'}, status=HTTP_200_OK)
+    else:
+        return Response({'error': 'Invalid Token'}, status=HTTP_403_FORBIDDEN)
