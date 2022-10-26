@@ -1,4 +1,5 @@
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.status import HTTP_400_BAD_REQUEST, HTTP_403_FORBIDDEN, HTTP_201_CREATED, HTTP_200_OK
 from django.contrib.auth.password_validation import validate_password
@@ -10,6 +11,7 @@ from django.template.loader import render_to_string
 from django.utils.html import strip_tags
 from email_validator import validate_email, EmailNotValidError
 from .models import User
+from .serializers import UserSerializer
 
 
 @api_view(['POST'])
@@ -103,3 +105,10 @@ def reset_password(request):
             return Response({'error': 'Invalid Token'}, status=HTTP_403_FORBIDDEN)
     else:
         return Response({'error': 'Missing Parameters'}, status=HTTP_400_BAD_REQUEST)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_user(request):
+    user = UserSerializer(request.user, many=False).data
+    return Response(user, HTTP_200_OK)

@@ -76,6 +76,15 @@ TEMPLATES = [
 ]
 WSGI_APPLICATION = 'authserver.wsgi.application'
 
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework_simplejwt.authentication.JWTAuthentication'
+    ],
+    'DEFAULT_RENDERER_CLASSES': (
+        'rest_framework.renderers.JSONRenderer',
+    )
+}
+
 # Database
 # https://docs.djangoproject.com/en/4.1/ref/settings/#databases
 DATABASES = {
