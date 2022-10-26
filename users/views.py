@@ -12,6 +12,7 @@ from django.utils.html import strip_tags
 from email_validator import validate_email, EmailNotValidError
 from .models import User
 from .serializers import UserSerializer
+from .managers import UserManager
 
 
 @api_view(['POST'])
@@ -107,8 +108,39 @@ def reset_password(request):
         return Response({'error': 'Missing Parameters'}, status=HTTP_400_BAD_REQUEST)
 
 
-@api_view(['GET'])
+@api_view(['GET', 'PUT', 'DELETE'])
 @permission_classes([IsAuthenticated])
-def get_user(request):
-    user = UserSerializer(request.user, many=False).data
-    return Response(user, HTTP_200_OK)
+def user(request):
+    if request.method == 'GET':
+        user = UserSerializer(request.user, many=False).data
+        return Response(user, HTTP_200_OK)
+    elif request.method == 'PUT':
+        if 'first_name' in request.data:
+            request.user.first_name = request.data['first_name']
+        if 'last_name' in request.data:
+            request.user.first_name = request.data['last_name']
+        if 'email' in request.data:
+            try:
+                validate_email(request.data['email'])
+            except EmailNotValidError:
+                return Response({'error': 'Invalid Email Address'},
+                                status=HTTP_400_BAD_REQUEST)
+            if User.objects.filter(email=request.data['email']).exists():
+                return Response(
+                    {'error': f"An account already exists with {request.data['email']} email address."},
+                    status=HTTP_403_FORBIDDEN)
+            request.user.email = UserManager.normalize_email(request.data['email'])
+            request.user.is_active = False
+            token = default_token_generator.make_token(request.user)
+            subject = f'Update Email Verification'
+            html_message = render_to_string('email_verification.html',
+                                            {'token': token, 'id': request.user.pk})
+            plain_message = strip_tags(html_message)
+            from_email = settings.EMAIL_HOST_USER
+            to = request.user.email
+            mail.send_mail(subject, plain_message, from_email, [to], html_message=html_message)
+        request.user.save()
+        return Response({'success': 'User information updated successfully'}, status=HTTP_200_OK)
+    elif request.method == 'DELETE':
+        request.user.delete()
+        return Response({'success': 'User deleted successfully'}, status=HTTP_200_OK)
